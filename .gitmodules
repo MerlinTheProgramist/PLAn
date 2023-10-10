@@ -1,0 +1,3 @@
+[submodule "client/plot"]
+	path = client/plot
+	url = https://github.com/fbbdev/plot
