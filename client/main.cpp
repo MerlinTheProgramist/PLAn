@@ -63,7 +63,7 @@ void jump_front(std::fstream& f){
 }
 
 
-bool log_hours(int hours, int day_offset=0, bool override=true){
+bool log_hours(int hours, bool add, int day_offset=0, bool override=true){
   std::fstream logfile(log_file_name, std::ios::in | std::ios::app);
   if(!logfile.is_open()) 
     throw std::invalid_argument("log file path not valid");
@@ -84,7 +84,6 @@ bool log_hours(int hours, int day_offset=0, bool override=true){
     
     std::string last_log;
     std::getline(logfile, last_log);
-    std::cout << "last_log: " << last_log << std::endl;
     
     LOG << "today is: " << now_tm->tm_year+1900 << '-' << now_tm->tm_mon << '-' << now_tm->tm_mday << std::endl;
     
@@ -93,6 +92,15 @@ bool log_hours(int hours, int day_offset=0, bool override=true){
       struct tm last_log_tm;
       {
         std::string last_log_date = last_log.substr(0, last_log.find(' '));
+        if(add)
+        {
+          hours+= stof(last_log.substr(last_log.find(' ')));
+          if(hours>24)
+          {
+            LOG << "can't log more than 24 hours a day" << std::endl;
+            return false;
+          }
+        }
         strptime(last_log_date.data(), date_format, &last_log_tm);
       }
       
@@ -113,6 +121,8 @@ bool log_hours(int hours, int day_offset=0, bool override=true){
   }
   else
     jump_front(logfile);
+
+  LOG << "logging: " << hours << "h to: "<< log_file_name << std::endl;
   // append to file
   logfile << date_str << ' ' << std::setfill('0') << std::setw(2) << hours << std::endl;
   logfile.close();
@@ -127,11 +137,13 @@ int main(int argc, char* const argv[]){
   desc.add_options()
     ("help,h", "produce help message")
     ("log,l", po::value<int>() ,"log today's working hours")
-    ("stats,s", "show progress statistics")
+    ("add,a", "if today's record exists, add this log to it")
+    // ("start", "start work day")//@not_impl
+    // ("end", "end work day")//@not_impl
+    ("show,s", "show progress statistics")
     ("gnuplot,p", "plot all time date with gnuplot (gui)")
-    ("term-plot,tp", "plot all time data to terminal")
-    // ("back,b", "edit ")
-    ("export,e", po::value<std::string>(), "export plot to file")
+    // ("term-plot,tp", "plot all time data to terminal") //@not_impl    
+    // ("export,e", po::value<std::string>(), "export plot to file") //@not_impl
     ("quiet,q", "run quietly");
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -152,12 +164,13 @@ int main(int argc, char* const argv[]){
       LOG << "working hours must in range 0 to 24" << std::endl;
       return 1;
     }
-    LOG << "logging: " << value << " to: "<< log_file_name << std::endl;
-    log_hours(value);
+    
+    log_hours(value, vm.count("add"));
   }
 
-    std::ifstream data(log_file_name, std::ios::in);
-    Plotter plotter(data);
+  // reading logs
+  std::ifstream data(log_file_name, std::ios::in);
+  Plotter plotter(data);
 
   if(vm.count("stats"))
     plotter.print_stats();
@@ -167,7 +180,7 @@ int main(int argc, char* const argv[]){
     data.close();
   }
   if(vm.count("term-plot")){
-    
+     
   }
   return 0;
 }
