@@ -68,7 +68,6 @@ bool log_hours(int hours, bool add, int day_offset=0, bool override=true){
   if(!logfile.is_open()) 
     throw std::invalid_argument("log file path not valid");
 
-  const time_t ONE_DAY = 24*60*60;
   
   // get now time
   time_t now = std::time(nullptr) + day_offset * ONE_DAY;
@@ -138,11 +137,10 @@ int main(int argc, char* const argv[]){
     ("help,h", "produce help message")
     ("log,l", po::value<int>() ,"log today's working hours")
     ("add,a", "if today's record exists, add this log to it")
-    // ("start", "start work day")//@not_impl
     // ("end", "end work day")//@not_impl
     ("show,s", "show progress statistics")
     ("gnuplot,p", "plot all time date with gnuplot (gui)")
-    // ("term-plot,tp", "plot all time data to terminal") //@not_impl    
+    ("term-plot,t", "plot all time data to terminal") //@not_impl
     // ("export,e", po::value<std::string>(), "export plot to file") //@not_impl
     ("quiet,q", "run quietly");
   po::variables_map vm;
@@ -172,15 +170,15 @@ int main(int argc, char* const argv[]){
   std::ifstream data(log_file_name, std::ios::in);
   Plotter plotter(data);
 
-  if(vm.count("stats"))
-    plotter.print_stats();
     
-  if(vm.count("gnuplot")){
-    plotter.gnu_plot(false);
-    data.close();
-  }
-  if(vm.count("term-plot")){
-     
-  }
+  if(vm.count("gnuplot"))
+    plotter.gnu_plot();
+  
+  if(vm.count("term-plot"))
+     plotter.term_plot();
+  
+  if(vm.count("show"))
+    plotter.print_stats();
+  
   return 0;
 }
