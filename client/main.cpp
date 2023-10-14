@@ -11,8 +11,8 @@
 #include <filesystem>
 
 #include "plot_lib.hpp"
-#include "gnu_plot.h"
 #include "consts.h"
+#include "plotter.h"
 
 namespace po = boost::program_options;
 
@@ -25,6 +25,8 @@ const char log_file_name[] = LOG_FILE_NAME;
 struct {
   bool quiet = false;
 } session_config;
+
+#define LOG if(!session_config.quiet) std::cout 
 
 void term_plot(std::ifstream& in){
   struct log_t{
@@ -39,25 +41,23 @@ void term_plot(std::ifstream& in){
   }
 }
 
-void jump_last_line(std::fstream& f){
+void jump_last_line(std::fstream& f, int line_len){
   f.seekg(-1, std::ios_base::end);
-  bool keepLooping{true};
-  while(keepLooping){
+  
+  while((int)f.tellg()>0){
     char ch;
     f.get(ch);
 
-    if((int)f.tellg() <= 1){
-      f.seekg(0);
-      keepLooping = false;
+    if(ch == '\n'){
+      f.seekg(-line_len, std::ios_base::cur);
+      return;
     }
-    else if(ch == '\n')
-      keepLooping = false;
-    else
-      f.seekg(-2, std::ios_base::cur);
+    
+    f.seekg(-1, std::ios_base::cur);
   }
 }
 
-void jump_end(std::fstream& f){
+void jump_front(std::fstream& f){
   f.clear();
   f.seekg(0);
 }
@@ -76,16 +76,17 @@ bool log_hours(int hours, int day_offset=0, bool override=true){
   std::string date_str(30, ' ');
   date_str.resize(strftime(date_str.data(), 30, date_format, now_tm));
   
+  const int line_len = date_str.size()+4;
+  
   // read last line from file and parse date
   if(override){
-    jump_last_line(logfile);
-
+    jump_last_line(logfile, line_len);
     
     std::string last_log;
     std::getline(logfile, last_log);
+    std::cout << "last_log: " << last_log << std::endl;
     
-    if(!session_config.quiet)
-      std::cout << "today is: " << now_tm->tm_year+1900 << '-' << now_tm->tm_mon << '-' << now_tm->tm_mday << std::endl;
+    LOG << "today is: " << now_tm->tm_year+1900 << '-' << now_tm->tm_mon << '-' << now_tm->tm_mday << std::endl;
     
     if(!last_log.empty())
     {
@@ -100,19 +101,20 @@ bool log_hours(int hours, int day_offset=0, bool override=true){
        now_tm->tm_mon==last_log_tm.tm_mon &&
        now_tm->tm_wday<=last_log_tm.tm_wday))
       {
-        if(!session_config.quiet)
-          std::cout << "Today's date already exsits, updating... " << std::endl;
+        LOG << "Today's date already exsits, updating... " << std::endl;
         logfile.close();
         logfile.clear();
         logfile.open(log_file_name);
-        logfile.seekp(-date_str.size()-4, std::ios_base::end);
+        logfile.seekp(-line_len, std::ios_base::end);
       }
     }
+    else
+      jump_front(logfile);
   }
-  // else
-    // jump_end(logfile);
+  else
+    jump_front(logfile);
   // append to file
-  logfile << '\n' << date_str << ' ' << std::setfill('0') << std::setw(2) << hours << std::flush;
+  logfile << date_str << ' ' << std::setfill('0') << std::setw(2) << hours << std::endl;
   logfile.close();
 
   return true;
@@ -125,33 +127,43 @@ int main(int argc, char* const argv[]){
   desc.add_options()
     ("help,h", "produce help message")
     ("log,l", po::value<int>() ,"log today's working hours")
+    ("stats,s", "show progress statistics")
     ("gnuplot,p", "plot all time date with gnuplot (gui)")
     ("term-plot,tp", "plot all time data to terminal")
     // ("back,b", "edit ")
-    ("export,e", po::value<std::string>(), "export plot to file");
+    ("export,e", po::value<std::string>(), "export plot to file")
+    ("quiet,q", "run quietly");
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
   po::notify(vm);
 
   if(vm.count("help") || vm.empty()){
-    std::cout << desc << std::endl;
+    LOG << desc << std::endl;
     return 0;
   }
 
+  if(vm.count("quiet"))
+    session_config.quiet = true;
+
+  
   if(vm.count("log")){
     int value = vm["log"].as<int>();
     if(value < 0 || value > 24){
-      std::cout << "working hours must in range 0 to 24" << std::endl;
+      LOG << "working hours must in range 0 to 24" << std::endl;
       return 1;
     }
-    std::cout << "logging: " << value << " to: "<< log_file_name << std::endl;
+    LOG << "logging: " << value << " to: "<< log_file_name << std::endl;
     log_hours(value);
   }
 
+    std::ifstream data(log_file_name, std::ios::in);
+    Plotter plotter(data);
+
+  if(vm.count("stats"))
+    plotter.print_stats();
+    
   if(vm.count("gnuplot")){
-    std::ifstream data(log_file_name);
-    GnuPlotter plotter(data);
-    // plotter.plot(false);
+    plotter.gnu_plot(false);
     data.close();
   }
   if(vm.count("term-plot")){
