@@ -132,23 +132,32 @@ bool log_hours(int hours, bool add, int day_offset=0, bool override=true){
 
 
 int main(int argc, char* const argv[]){
-  po::options_description desc("Allowed options");
+  po::options_description desc( 
+    "Welcom to PLAn (Productivity Logging Assistanat networked),\n your yet another terminal tool, this time hopefully encourages your productivity :).");
   desc.add_options()
     ("help,h", "produce help message")
     ("log,l", po::value<int>() ,"log today's working hours")
     ("add,a", "if today's record exists, add this log to it")
-    // ("end", "end work day")//@not_impl
+    // ("start", "start work day") // @future
+    // ("end", "end work day") //@future
     ("show,s", "show progress statistics")
     ("gnuplot,p", "plot all time date with gnuplot (gui)")
-    ("term-plot,t", "plot all time data to terminal") //@not_impl
-    // ("export,e", po::value<std::string>(), "export plot to file") //@not_impl
+    ("term-plot", "plot all time data to tui plotter (gnuplot is more recommended)")
     ("quiet,q", "run quietly");
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
   po::notify(vm);
 
   if(vm.count("help") || vm.empty()){
-    LOG << desc << std::endl;
+    LOG << desc << '\n' << 
+           "Description:"
+           "This tool is inspired by book \"Deep Work\" by Cal Newport (highly recommend reading).\n"
+           "He advises making reports of how many hours a day you work or learn, and looking back at the time you spend over a period will make you appreciate your time\n"
+           "Code of conduct: \n"
+           "- Report only hours of DEEP work hours (or self teaching), sending email, communicating, unporposely browsing web ARE NOT ALLOWED\n"
+           "- Don't play with this program, this is a serious tool\n"
+           "- Cheating in any above is illegal :v\n" 
+        << std::endl;
     return 0;
   }
 
