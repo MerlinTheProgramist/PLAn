@@ -1,6 +1,6 @@
 [submodule "client/plot"]
-	path = client/plot
+	path = plot
 	url = https://github.com/fbbdev/plot
 [submodule "client/gnuplot-iostream"]
-	path = client/gnuplot-iostream
+	path = gnuplot-iostream
 	url = https://github.com/dstahlke/gnuplot-iostream.git
