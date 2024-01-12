@@ -83,7 +83,6 @@ void Plotter::gnu_plot() {
   "wshift_n(x) = @wshift\n"
 
   "# the final plot command looks quite simple\n"
-  "set terminal pngcairo #enhanced background rgb 'black'\n"
   "set xdata time\n"
   "set timefmt '%Y-%m-%d'\n"
   "plot " << gp.file1d(data) << " using 1:2 w l lc rgb 'blue' lw 1 title 'performance' , "
