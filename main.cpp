@@ -70,7 +70,7 @@ bool log_hours(int hours, bool add, int day_offset=0, bool override=true){
 
   
   // get now time
-  time_t now = std::time(nullptr) + day_offset * ONE_DAY;
+  time_t now = std::time(nullptr) + (day_offset * ONE_DAY);
   tm* now_tm = localtime(&now);
   std::string date_str(30, ' ');
   date_str.resize(strftime(date_str.data(), 30, date_format, now_tm));
@@ -83,8 +83,8 @@ bool log_hours(int hours, bool add, int day_offset=0, bool override=true){
     
     std::string last_log;
     std::getline(logfile, last_log);
-    
-    LOG << "today is: " << now_tm->tm_year+1900 << '-' << now_tm->tm_mon << '-' << now_tm->tm_mday << std::endl;
+
+    LOG << "log time: " << now_tm->tm_year+1900 << '-' << now_tm->tm_mon << '-' << now_tm->tm_mday << std::endl;
     
     if(!last_log.empty())
     {
@@ -140,6 +140,7 @@ int main(int argc, char* const argv[]){
     ("add,a", "if today's record exists, add this log to it")
     // ("start", "start work day") // @future
     // ("end", "end work day") //@future
+    ("yesterday,y", "log for yesterday")
     ("show,s", "show progress statistics")
     ("gnuplot,p", "plot all time date with gnuplot (gui)")
     ("term-plot", "plot all time data to tui plotter (gnuplot is more recommended)")
@@ -164,6 +165,10 @@ int main(int argc, char* const argv[]){
   if(vm.count("quiet"))
     session_config.quiet = true;
 
+  int offset = 0;
+  if(vm.count("yesterday"))
+    offset = -1;
+
   
   if(vm.count("log")){
     int value = vm["log"].as<int>();
@@ -172,7 +177,7 @@ int main(int argc, char* const argv[]){
       return 1;
     }
     
-    log_hours(value, vm.count("add"));
+    log_hours(value, vm.count("add"), offset);
   }
 
   // reading logs
