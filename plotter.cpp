@@ -27,18 +27,69 @@ void Plotter::print_stats(){
 void Plotter::gnu_plot() {
   Gnuplot gp;
   // std::vector<std::pair<int, int>>
+  gp <<  
+  "# number of points in moving average\n"
+  "n = 18\n"
+  "# weekly averaged\n"
+  "w =  7 \n"
 
-  gp << 
-  "set yrange [0:*]\n"
-  "set ylabel 'hours'\n"
-  
-  "set xlabel 'days'\n"
+  "# initialize the variables\n"
+  "do for [i=1:n] {\n"
+  "    eval(sprintf('back%d=0', i))\n"
+  "}\n"
+  "do for [i=1:w] {\n"
+  "    eval(sprintf('wback%d=0', i))\n"
+  "}\n"
+
+  "# build shift function (back_n = back_n-1, ..., back1=x)\n"
+  "shift = '('\n"
+  "do for [i=n:2:-1] {\n"
+  "    shift = sprintf('%sback%d = back%d, ', shift, i, i-1)\n"
+  "} \n"
+  "shift = shift.'back1 = x)'\n"
+
+  "wshift = '('\n"
+  "do for [i=w:2:-1] {\n"
+  "    wshift = sprintf('%swback%d = wback%d, ', wshift, i, i-1)\n"
+  "} \n"
+  "wshift = wshift.'wback1 = x)'\n"
+  "# uncomment the next line for a check\n"
+  "# print shift\n"
+
+  "# build sum function (back1 + ... + backn)\n"
+  "sum = '(back1'\n"
+  "do for [i=2:n] {\n"
+  "    sum = sprintf('%s+back%d', sum, i)\n"
+  "}\n"
+  "sum = sum.')'\n"
+
+  "wsum = '(wback1'\n"
+  "do for [i=2:w] {\n"
+  "    wsum = sprintf('%s+wback%d', wsum, i)\n"
+  "}\n"
+  "wsum = wsum.')'\n"
+
+  "# uncomment the next line for a check\n"
+  "# print sum\n"
+
+  "# define the functions like in the gnuplot demo\n"
+  "# use macro expansion for turning the strings into real functions\n"
+  "samples(x) = $0 > (n-1) ? n : ($0+1)\n"
+  "avg_n(x) = (shift_n(x), @sum/samples($0))\n"
+  "shift_n(x) = @shift\n"
+
+  "wsamples(x) = $0 > (w-1) ? w : ($0+1)\n"
+  "wavg_n(x) = (wshift_n(x), @wsum/wsamples($0))\n"
+  "wshift_n(x) = @wshift\n"
+
+  "# the final plot command looks quite simple\n"
+  "set terminal pngcairo #enhanced background rgb 'black'\n"
   "set xdata time\n"
   "set timefmt '%Y-%m-%d'\n"
-  "set xtics format ''\n"
-  "plot" << gp.file1d(data) << "u 1:2  w l  lc 'red'  ti 'progess'\n"
+  "plot " << gp.file1d(data) << " using 1:2 w l lc rgb 'blue' lw 1 title 'performance' , "
+  "     " << gp.file1d(data) << " using 1:(wavg_n($2)) w l lc rgb 'green' lw 3 title 'averaged 7 days', "
+  "     " << gp.file1d(data) << " using 1:(avg_n($2)) w l lc rgb 'red' lw 5 title 'averaged  ' . n . ' days'\n" 
   << std::endl;
-  // getchar();
 }
 
 void Plotter::term_plot(){
